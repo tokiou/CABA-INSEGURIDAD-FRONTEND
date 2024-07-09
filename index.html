@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Ruta</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .search-container {
+            position: absolute;
+            top: 50px;
+            left: 50px;
+            background-color: rgba(90, 86, 86, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+
+        .search-container input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ffffff;
+            border-radius: 3px;
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <form id="map-form">
+            <div class="form-group">
+                <label for="estado">Estado:</label>
+                <select id="estado" name="estado" class="form-control" required>
+                    <option value="foot-walking">Caminando</option>
+                    <option value="driving-car">En coche</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="inicio">Inicio:</label>
+                <input type="text" id="inicio" name="inicio" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="fin">Fin:</label>
+                <input type="text" id="fin" name="fin" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Enviar</button>
+        </form>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        const mapContainer = document.getElementById('map');
+        const mapForm = document.getElementById('map-form');
+
+        async function loadInitialMap() {
+            try {
+                const response = await fetch('http://localhost:8000/map');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const mapHtml = await response.text();
+
+                // Insertar el HTML en el contenedor
+                mapContainer.innerHTML = mapHtml;
+
+                // Buscar y ejecutar todos los scripts en el HTML recibido
+                const scripts = mapContainer.getElementsByTagName('script');
+                for (let script of scripts) {
+                    eval(script.innerText);
+                }
+            } catch (error) {
+                console.error('Error al cargar el mapa inicial:', error);
+            }
+        }
+
+        // Esperar a que Leaflet.js esté completamente cargado
+        window.addEventListener('load', () => {
+            loadInitialMap();
+        });
+
+        // Configuración del WebSocket
+        const ws = new WebSocket('ws://localhost:8000/ws');
+
+        ws.onopen = function() {
+            console.log('Conexión WebSocket establecida');
+        };
+
+        ws.onmessage = function(event) {
+            // Insertar el HTML actualizado en el contenedor
+            mapContainer.innerHTML = event.data;
+
+            // Buscar y ejecutar todos los scripts en el HTML recibido
+            const scripts = mapContainer.getElementsByTagName('script');
+            for (let script of scripts) {
+                eval(script.innerText);
+            }
+        };
+
+        ws.onerror = function(error) {
+            console.error('Error en la conexión WebSocket:', error);
+        };
+
+        ws.onclose = function() {
+            console.log('Conexión WebSocket cerrada');
+        };
+
+        // Enviar datos del formulario a través del WebSocket
+        mapForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const estado = document.getElementById('estado').value;
+            const inicio = document.getElementById('inicio').value;
+            const fin = document.getElementById('fin').value;
+
+            const data = {
+                estado: estado,
+                inicio: inicio,
+                fin: fin
+            };
+
+            ws.send(JSON.stringify(data));
+        });
+    </script>
+</body>
+</html>
