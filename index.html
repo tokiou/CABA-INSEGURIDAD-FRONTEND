@@ -109,7 +109,7 @@
         const mapForm = document.getElementById('map-form');
 
         // Configuración del WebSocket
-        const ws = new WebSocket('wss://caba-inseguridad-be-latest.onrender.com/ws'); // Cambiar a wss y la URL correcta
+        const ws = new WebSocket('wss://backend-in-caba-latest.onrender.com/ws'); // Cambiar a wss y la URL correcta
         ws.onopen = function() {
             console.log('Conexión WebSocket establecida');
             ws.send(JSON.stringify({ session_id: Cookies.get('user_session') }));
